@@ -1,0 +1,30 @@
+{
+	"manifest_version": 2,
+	"name": "Trans",
+	"version": "1.0",
+
+	"description": "This Add-on is for developers working with Oracle CPQ Cloud. Add-on is used to copy transaction ID of a quote and also provides the XML document of the quote.",
+
+	"icons": {
+		"48": "icons/Info.png"
+	},
+	"permissions": [
+		"activeTab",
+		"clipboardWrite",
+		"tabs",
+		"*://*.bigmachines.com/commerce/buyside/*"
+	],
+	
+	"browser_action": {
+		"default_icon" : "icons/Info.png",
+		"default_title": "Trans",
+		"default_popup": "popup/copy-popup.html"
+	},
+	"content_scripts": [
+		{
+			"matches": ["*://*.bigmachines.com/commerce/buyside/*"],
+			"js": ["manifest.js"]
+		}
+	]
+
+}
