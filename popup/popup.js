@@ -1,27 +1,39 @@
 var tranId;
-var tranIdLegacy;
 var procId;
 
-chrome.tabs.query({ currentWindow: true, active: true }, function(tabs) {
-  var port = chrome.tabs.connect(tabs[0].id); //Setting up connection with content script
+chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
   currentTabUrl = tabs[0].url; //getting the current url of the active tab to retrieve the domain name
   if (
     currentTabUrl.includes(".bigmachines.com/commerce/buyside/document.jsp") //Determine if the quote id using legacy or JET UI
   ) {
-    port.postMessage({ isLegacy: "true" }); //Requesting for transaction ID and process ID based on the flag
+    chrome.tabs
+      .executeScript({
+        code:
+          "var tid = document.getElementsByName('id')[0].value; var pid = document.getElementsByName('bm_cm_process_id')[0].value; tid + '-' + pid",
+      }, (res) => {
+        Ids = res[0].split("-");
+        tranId = Ids[0];
+        procId = Ids[1];
+        document.getElementById("buysideid").value = tranId;
+      });
   } else if (currentTabUrl.includes(".bigmachines.com/commerce/transaction")) {
-    port.postMessage({ isLegacy: "false", tabUrl: currentTabUrl });
-    currentTabUrlFragmentsArr = currentTabUrl.split("/");
-    tranId = currentTabUrlFragmentsArr[currentTabUrlFragmentsArr.length - 1];
-    document.getElementById("buysideid").value = tranId;
-  }
 
-  port.onMessage.addListener(response => {
-    //Get Transaction and process IDs from content script
-    tranId = response.tid;
-    procId = response.pid;
-    document.getElementById("buysideid").value = tranId;
-  });
+    currentTabUrlFragmentsArr = currentTabUrl.split("/");
+    tranId = currentTabUrlFragmentsArr[6];
+    fetch(`https://${currentTabUrlFragmentsArr[2]}/rest/v8/commerceProcesses/${currentTabUrlFragmentsArr[5]}/documents`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Fetching process documents failed.");
+        }
+        response.json().then(jsonData => {
+          procId = jsonData.items[0].process.id;
+          document.getElementById("buysideid").value = tranId;
+        });
+      })
+      .catch(error => {
+        console.error("Problem fetching Process ID: ", error);
+      });
+  }
 });
 
 function openXml(xslUrl, subdomain) {
@@ -52,13 +64,13 @@ function openXml(xslUrl, subdomain) {
     });
 }
 
-document.addEventListener("click", function(event) {
+document.addEventListener("click", function (event) {
   if (event.target.id === "copy") {
     var copyText = document.getElementById("buysideid");
     copyText.select();
     document.execCommand("copy");
   } else if (event.target.id === "xml") {
-    chrome.tabs.query({ currentWindow: true, active: true }, function(tabs) {
+    chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
       currentUrl = tabs[0].url; //getting the current url of the active tab to retrieve the domain name
       var pos = currentUrl.search(".bigmachines.com");
       var pos1 = currentUrl.search("//");
